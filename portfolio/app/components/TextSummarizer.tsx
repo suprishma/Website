@@ -5,11 +5,43 @@ import { useState } from 'react';
 export default function TextSummarizer() {
   const [inputText, setInputText] = useState('');
   const [summary, setSummary] = useState('');
+  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleSummarize = async () => {
-    if (!inputText.trim()) return;
+  // Check if text contains Nepali characters
+  const isNepaliText = (text: string): boolean => {
+    const nepaliRegex = /[\u0900-\u097F]/;
+    return nepaliRegex.test(text);
+  };
 
+  // Validate input
+  const validateInput = (): string => {
+    const trimmedText = inputText.trim();
+    
+    if (!trimmedText) {
+      return 'Please enter some text';
+    }
+    
+    if (trimmedText.length < 50) {
+      return 'Text too short. Minimum 50 characters required';
+    }
+    
+    if (!isNepaliText(trimmedText)) {
+      return 'Please enter Nepali text only';
+    }
+    
+    return '';
+  };
+
+  const handleSummarize = async () => {
+    const validationError = validateInput();
+    
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
+
+    setError('');
     setLoading(true);
     setSummary('');
 
@@ -26,11 +58,14 @@ export default function TextSummarizer() {
 
       if (response.ok) {
         setSummary(data.summary);
+        setError('');
       } else {
-        setSummary(`Error: ${data.error}`);
+        setError(`Error: ${data.error}`);
+        setSummary('');
       }
     } catch (error) {
-      setSummary('Error: Failed to summarize text');
+      setError('Error: Failed to summarize text');
+      setSummary('');
     } finally {
       setLoading(false);
     }
@@ -42,9 +77,20 @@ export default function TextSummarizer() {
       <textarea
         value={inputText}
         onChange={(e) => setInputText(e.target.value)}
-        placeholder="Enter text to summarize..."
+        placeholder="Enter Nepali text to summarize (minimum 50 characters)..."
         className="w-full h-32 p-3 border border-gray-300 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
       />
+      <div className="flex justify-between items-center mt-2 text-sm text-gray-600">
+        <span>Characters: {inputText.length}</span>
+        {inputText.length > 0 && inputText.length < 50 && (
+          <span className="text-red-500">Too short length</span>
+        )}
+      </div>
+      {error && (
+        <div className="mt-3 p-3 bg-red-100 border border-red-400 text-red-700 rounded-md">
+          {error}
+        </div>
+      )}
       <button
         onClick={handleSummarize}
         disabled={loading || !inputText.trim()}
